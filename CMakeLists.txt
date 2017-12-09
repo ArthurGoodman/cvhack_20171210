@@ -1,32 +1,15 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-PROJECT(hackathone)
+cmake_minimum_required(VERSION 3.0.0)
+project(cvhack)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -ggdb -lpthread")
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED on)
+set(CMAKE_CXX_EXTENSIONS off)
 
-FIND_PACKAGE(OpenCV REQUIRED )
-FIND_PACKAGE(Threads REQUIRED)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
-INCLUDE_DIRECTORIES(
-	${OpenCV_INCLUDE_DIR}
-)
+find_package(OpenCV REQUIRED)
 
-
-#set(SOURCE_LIBS
-#	)
-	
-
-#add_library(common STATIC ${SOURCE_LIBS})
-
-add_executable(test test.cpp)
-
-
-target_link_libraries(test
-    ${OpenCV_LIBRARIES}
-#    common
-)
-
-
-
-#SET(CMAKE_BUILD_TYPE Release)
-SET(CMAKE_BUILD_TYPE Debug)
-
+add_subdirectory(video_player)
+add_subdirectory(simple_test)
