@@ -1,5 +1,5 @@
 add_executable(video_player
-    main.cpp)
+    video_player.cpp)
 
 target_include_directories(video_player
     PRIVATE ${OpenCV_INCLUDE_DIRS})

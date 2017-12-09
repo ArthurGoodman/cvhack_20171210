@@ -13,3 +13,4 @@ find_package(OpenCV REQUIRED)
 
 add_subdirectory(video_player)
 add_subdirectory(simple_test)
+add_subdirectory(vehicle_detection)
