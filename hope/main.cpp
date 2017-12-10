@@ -3,6 +3,14 @@
 
 using namespace cv;
 
+cv::Point2f principal_point(5.8479e+2, 3.8181e+2);
+double focal_length = 9.9856e+2;
+std::vector<double> distortion_coeffs = { -4.5984e-01,
+                                          3.4864e-01,
+                                          -2.4388e-01,
+                                          -7.6548e-03,
+                                          1.5670e-02 }; // P1, P2, P3, K1, K2
+
 cv::Mat original_frame, frame;
 bool in_the_middle_of_setting_line = false;
 
@@ -18,6 +26,16 @@ int frameHeight = 720;
 #define PI 3.1415926535897932
 
 cv::Point2f intersection;
+
+double camera_height = 0;
+double FOV_x = 0;
+double FOV_y = 0;
+
+cv::Point2f window_to_world(cv::Point2f p) {
+    double tx = camera_height * tan(FOV_x / 2);
+    double ty = camera_height * tan(FOV_y / 2);
+    return cv::Point2f(2 * p.x * (tx / frameWidth) - tx, 2 * p.y * (ty / frameHeight) - ty);
+}
 
 cv::Mat birdView(cv::Mat source) {
     cv::Mat destination;
@@ -142,28 +160,31 @@ cv::Mat birdView(cv::Mat source) {
     Mat H = (K * (T * (R * A1)));
     std::cout << H << std::endl;
 
-    warpPerspective(
-        original_frame, destination, H, image_size, INTER_CUBIC | WARP_INVERSE_MAP);
+    warpPerspective(original_frame, destination, H, image_size, INTER_CUBIC | WARP_INVERSE_MAP);
 
-    cv::Mat p1(3, 1);
-    cv::Mat p2(3, 1);
+    cv::Mat_<float> p1(3, 1);
+    cv::Mat_<float> p2(3, 1);
 
-    p1(0,0) = lines[1].p1.x;
-    p1(1,0) = lines[1].p1.y;
-    p1(2,0) = 0;
+    p1(0, 0) = lines[1].p1.x;
+    p1(1, 0) = lines[1].p1.y;
+    p1(2, 0) = 1;
 
-    p2(0,0) = lines[1].p2.x;
-    p2(1,0) = lines[1].p2.y;
-    p2(2,0) = 0;
+    p2(0, 0) = lines[1].p2.x;
+    p2(1, 0) = lines[1].p2.y;
+    p2(2, 0) = 1;
 
-    p1 = H * p1;
-    p2 = H * p2;
+    cv::Mat_<float> p1_bird = H * p1;
+    cv::Mat_<double> p2_bird = H * p2;
+
+    cv::Point2f wp1 = window_to_world(cv::Point2f(p1_bird(0, 0), p1_bird(1, 0)));
+    cv::Point2f wp2 = window_to_world(cv::Point2f(p2_bird(0, 0), p2_bird(1, 0)));
+
+    std::cout << "len=" << sqrt(pow(wp1.x - wp2.x, 2) + pow(wp1.y - wp2.y, 2)) << "\n";
 
     cv::imshow("birdview", destination);
 
     return destination;
 }
-
 
 void mouseCallback(int event, int x, int y, int flags, void *param) {
     const int size = 5;
@@ -218,11 +239,10 @@ void mouseCallback(int event, int x, int y, int flags, void *param) {
 }
 
 int main(int argc, char **argv) {
-    cv::Point2f principal_point(5.8479e+2, 3.8181e+2);
-    cv::Point2f focal_length(9.9856e+2, 9.9856e+2);
-    std::vector<double> distortion_coeffs = {
-        -4.5984e-01, 3.4864e-01, -2.4388e-01, -7.6548e-03, 1.5670e-02
-    }; // P1, P2, P3, K1, K2
+    FOV_x = 2 * atan(double(frameWidth) / 2 / focal_length);
+    FOV_y = 2 * atan(double(frameHeight) / 2 / focal_length);
+
+    camera_height = 1.2;
 
     cv::VideoCapture capture("data1/2/camera1.avi");
 
