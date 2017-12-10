@@ -45,14 +45,14 @@ cv::Mat birdView(cv::Mat source) {
 
     // resize(source, source, cv::Size(frameWidth, frameHeight));
 
-    // Mat t_original3 = (Mat_<float>(3, 3) << 1, 0, intersection.x,
-    //                               0, 1, intersection.y,
-    //                               0, 0, 1);
+    Mat t_original3 = (Mat_<float>(3, 3) << 1, 0, -intersection.x + frameWidth/2,
+                                  0, 1, -intersection.y + frameHeight/2,
+                                  0, 0, 1);
 
-    // Mat t_original4 = (Mat_<float>(4, 4) << 1, 0, 0, intersection.x,
-    //                               0, 1, 0, intersection.y,
-    //                               0, 0, 1, 0,
-    //                               0, 0, 0, 1);
+    Mat t_original4 = (Mat_<float>(4, 4) << 1, 0, 0, -intersection.x + frameWidth/2,
+                                  0, 1, 0, -intersection.y+frameHeight/2,
+                                  0, 0, 1, 0,
+                                  0, 0, 0, 1);
 
     double focalLength, dist, alpha, beta, gamma;
 
@@ -157,7 +157,7 @@ cv::Mat birdView(cv::Mat source) {
          1,
          0);
 
-    Mat H = (K * (T * (R * A1)));
+    Mat H = t_original3*(K * (T * (R * A1)));
     std::cout << H << std::endl;
 
     warpPerspective(original_frame, destination, H, image_size, INTER_CUBIC | WARP_INVERSE_MAP);
