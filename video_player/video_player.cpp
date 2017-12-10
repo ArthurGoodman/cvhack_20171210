@@ -21,6 +21,7 @@ int main(int, char **) {
 
         cv::imshow("video", edges);
 
+
         if (cv::waitKey(30) >= 0)
             break;
     }
