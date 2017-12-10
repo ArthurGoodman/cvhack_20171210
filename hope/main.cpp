@@ -1,26 +1,216 @@
 #include <iostream>
 #include <opencv2/opencv.hpp>
 
-cv::Mat frame;
-bool first_point_set = false;
-cv::Point first_point;
+using namespace cv;
+
+cv::Mat original_frame, frame;
+bool in_the_middle_of_setting_line = false;
+
+struct Line {
+    cv::Point2f p1, p2;
+};
+
+std::vector<Line> lines;
+
+int frameWidth = 1280;
+int frameHeight = 720;
+
+#define PI 3.1415926535897932
+
+cv::Point2f intersection;
+
+cv::Mat birdView(cv::Mat source) {
+    cv::Mat destination;
+
+    int alpha_ = 7, beta_ = 90, gamma_ = 90;
+    int f_ = 500, dist_ = 545;
+
+    // resize(source, source, cv::Size(frameWidth, frameHeight));
+
+    // Mat t_original3 = (Mat_<float>(3, 3) << 1, 0, intersection.x,
+    //                               0, 1, intersection.y,
+    //                               0, 0, 1);
+
+    // Mat t_original4 = (Mat_<float>(4, 4) << 1, 0, 0, intersection.x,
+    //                               0, 1, 0, intersection.y,
+    //                               0, 0, 1, 0,
+    //                               0, 0, 0, 1);
+
+    double focalLength, dist, alpha, beta, gamma;
+
+    alpha = ((double)alpha_ - 90) * PI / 180;
+    beta = ((double)beta_ - 90) * PI / 180;
+    gamma = ((double)gamma_ - 90) * PI / 180;
+    focalLength = (double)f_;
+    dist = (double)dist_;
+
+    Size image_size = source.size();
+    double w = (double)image_size.width, h = (double)image_size.height;
+
+    // Projecion matrix 2D -> 3D
+    Mat A1 =
+        (Mat_<float>(4, 3) << 1,
+         0,
+         -w / 2, //-w/2
+         0,
+         1,
+         -h / 2, //-h/2
+         0,
+         0,
+         0,
+         0,
+         0,
+         1);
+
+    // Rotation matrices Rx, Ry, Rz
+
+    Mat RX =
+        (Mat_<float>(4, 4) << 1,
+         0,
+         0,
+         0,
+         0,
+         cos(alpha),
+         -sin(alpha),
+         0,
+         0,
+         sin(alpha),
+         cos(alpha),
+         0,
+         0,
+         0,
+         0,
+         1);
+
+    Mat RY =
+        (Mat_<float>(4, 4) << cos(beta),
+         0,
+         -sin(beta),
+         0,
+         0,
+         1,
+         0,
+         0,
+         sin(beta),
+         0,
+         cos(beta),
+         0,
+         0,
+         0,
+         0,
+         1);
+
+    Mat RZ =
+        (Mat_<float>(4, 4) << cos(gamma),
+         -sin(gamma),
+         0,
+         0,
+         sin(gamma),
+         cos(gamma),
+         0,
+         0,
+         0,
+         0,
+         1,
+         0,
+         0,
+         0,
+         0,
+         1);
+
+    // R - rotation matrix
+    Mat R = RX * RY * RZ;
+
+    // T - translation matrix
+    Mat T = (Mat_<float>(4, 4) << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, dist, 0, 0, 0, 1);
+
+    // K - intrinsic matrix
+    Mat K =
+        (Mat_<float>(3, 4) << 9.9856e+02,
+         0,
+         5.8479e+02,
+         0,
+         0,
+         9.9856e+02,
+         3.8181e+02,
+         0,
+         0,
+         0,
+         1,
+         0);
+
+    Mat H = (K * (T * (R * A1)));
+    std::cout << H << std::endl;
+
+    warpPerspective(
+        original_frame, destination, H, image_size, INTER_CUBIC | WARP_INVERSE_MAP);
+
+    cv::Mat p1(3, 1);
+    cv::Mat p2(3, 1);
+
+    p1(0,0) = lines[1].p1.x;
+    p1(1,0) = lines[1].p1.y;
+    p1(2,0) = 0;
+
+    p2(0,0) = lines[1].p2.x;
+    p2(1,0) = lines[1].p2.y;
+    p2(2,0) = 0;
+
+    p1 = H * p1;
+    p2 = H * p2;
+
+    cv::imshow("birdview", destination);
+
+    return destination;
+}
+
 
 void mouseCallback(int event, int x, int y, int flags, void *param) {
     const int size = 5;
 
     if (event == cv::EVENT_LBUTTONDOWN) {
-        if (!first_point_set) {
+        if (!in_the_middle_of_setting_line) {
+            lines.push_back({});
+
             std::cout << x << " " << y << "\n";
 
-            first_point = cv::Point(x, y);
-            first_point_set = true;
+            lines.back().p1 = cv::Point(x, y);
+            in_the_middle_of_setting_line = true;
 
             cv::circle(frame, cv::Point(x, y), size, cv::Scalar(0, 0, 255), size);
 
             cv::imshow("video", frame);
         } else {
+            lines.back().p2 = cv::Point(x, y);
+            in_the_middle_of_setting_line = false;
+
             cv::circle(frame, cv::Point(x, y), size, cv::Scalar(0, 0, 255), size);
-            cv::line(frame, cv::Point(x, y), first_point, cv::Scalar(0, 255, 0), 5, CV_AA);
+            cv::line(frame, lines.back().p1, lines.back().p2, cv::Scalar(0, 255, 0), 5, CV_AA);
+
+            if (lines.size() == 2) {
+                float x1 = lines[0].p1.x;
+                float x2 = lines[0].p2.x;
+                float x3 = lines[1].p1.x;
+                float x4 = lines[1].p2.x;
+
+                float y1 = lines[0].p1.y;
+                float y2 = lines[0].p2.y;
+                float y3 = lines[1].p1.y;
+                float y4 = lines[1].p2.y;
+
+                intersection.x =
+                    ((x1 * y2 - y1 * x2) * (x3 - x4) - (x1 - x2) * (x3 * y4 - y3 * x4)) /
+                    ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+                intersection.y =
+                    ((x1 * y2 - y1 * x2) * (y3 - y4) - (y1 - y2) * (x3 * y4 - y3 * x4)) /
+                    ((x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4));
+
+                cv::circle(frame, intersection, size, cv::Scalar(255, 0, 0), size);
+                cv::line(frame, lines[0].p2, intersection, cv::Scalar(0, 255, 0), 5, CV_AA);
+                cv::line(frame, lines[1].p2, intersection, cv::Scalar(0, 255, 0), 5, CV_AA);
+
+                birdView(frame);
+            }
 
             cv::imshow("video", frame);
         }
@@ -51,13 +241,13 @@ int main(int argc, char **argv) {
             if (key == 27)
                 return 0;
 
+            original_frame = frame.clone();
+
             break;
         }
     }
 
     cv::setMouseCallback("video", mouseCallback, 0);
-
-    cv::imshow("video", frame);
     cv::waitKey(0);
 
     return 0;
