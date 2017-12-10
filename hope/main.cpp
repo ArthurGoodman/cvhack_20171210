@@ -157,7 +157,7 @@ cv::Mat birdView(cv::Mat source) {
          1,
          0);
 
-    Mat H = t_original3*(K * (T * (R * A1)));
+    Mat H = t_original3 * (K * (T * (R * A1)));
     std::cout << H << std::endl;
 
     warpPerspective(original_frame, destination, H, image_size, INTER_CUBIC | WARP_INVERSE_MAP);
@@ -242,9 +242,11 @@ int main(int argc, char **argv) {
     FOV_x = 2 * atan(double(frameWidth) / 2 / focal_length);
     FOV_y = 2 * atan(double(frameHeight) / 2 / focal_length);
 
+    std::cout << FOV_x / PI * 180 << " " << FOV_y / PI * 180 << "\n";
+
     camera_height = 1.2;
 
-    cv::VideoCapture capture("data1/2/camera1.avi");
+    cv::VideoCapture capture("data1/4/camera1.avi");
 
     if (!capture.isOpened())
         return -1;
@@ -268,7 +270,9 @@ int main(int argc, char **argv) {
     }
 
     cv::setMouseCallback("video", mouseCallback, 0);
-    cv::waitKey(0);
+    while (true)
+        if (cv::waitKey(0) == 27)
+            break;
 
     return 0;
 }
